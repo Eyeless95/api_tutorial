@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework import renderers
-from rest_framework import viewsets
+from rest_framework import viewsets, authentication
 from rest_framework.decorators import detail_route
 
 
@@ -22,7 +22,8 @@ class SnippetViewSet(viewsets.ModelViewSet):
     queryset = Snippet.objects.all()
     serializer_class = SnippetSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,
-                          IsOwnerOrReadOnly,)
+                          IsOwnerOrReadOnly,
+                          permissions.IsAdminUser,)
 
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def highlight(self, request, *args, **kwargs):
@@ -39,13 +40,26 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = (permissions.IsAdminUser,)
 
 
 @api_view(['GET'])
 def api_root(request, format=None):
+
     return Response({
         'users': reverse('user-list', request=request, format=format),
         'snippets': reverse('snippet-list', request=request, format=format)
     })
 
 
+class LanguageList(generics.ListAPIView):
+    serializer_class = SnippetSerializer
+    permission_classes = (permissions.IsAdminUser,)
+
+    def get_queryset(self):
+        """
+        This view should return a list of all the purchases
+        for the currently authenticated user.
+        """
+        language = self.kwargs['language']
+        return Snippet.objects.filter(language=language)
